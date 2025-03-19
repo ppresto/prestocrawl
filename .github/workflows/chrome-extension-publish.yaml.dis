@@ -1,0 +1,35 @@
+name: Publish to Chrome Web Store
+
+on:
+  push:
+    tags:
+      - 'v*'  # Runs when you push a new version tag (e.g., v1.0.0)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Zip extension files
+        run: zip -r prestocrawl.zip . -x "*.git*" ".github/*"
+
+      - name: Upload to Chrome Web Store
+        uses: trmcnvn/chrome-webstore-upload@v3
+        with:
+          extension-id: "YOUR_EXTENSION_ID"
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          zip-file: ./prestocrawl.zip
+
+      - name: Publish to Chrome Web Store
+        uses: trmcnvn/chrome-webstore-publish@v3
+        with:
+          extension-id: "YOUR_EXTENSION_ID"
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publish-target: "default"
