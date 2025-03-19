@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>PrestoCrawl</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 10px;
+        background-color: white;
+      }
+      .container {
+        width: 420px;
+        height: 600px;
+        border: 2px solid #FF69B4; /* Pink border */
+        border-radius: 15px;
+        background-color: white;
+        padding: 15px;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      #logo {
+        display: block;
+        width: 90%; /* Takes up most of the width */
+        max-width: 350px;
+        height: auto; /* Allow natural height */
+        max-height: 80px; /* Reduce height */
+        margin: 0 auto 10px;
+      }
+      label {
+        color: blue;
+        display: block;
+        margin-top: 10px;
+        text-align: left;
+      }
+      input, select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid blue;
+        border-radius: 5px;
+        background: white;
+        color: black;
+      }
+      button {
+        background-color: #FF69B4; /* Pink */
+        border: none;
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 1em;
+        width: 100%;
+        margin-top: 15px;
+      }
+      #status {
+        background-color: blue;
+        color: white;
+        padding: 5px;
+        margin-top: 10px;
+        border: 2px solid blue;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: bold;
+      }
+      #log {
+        background-color: white;
+        color: black;
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid blue;
+        border-radius: 5px;
+        height: 100px;
+        overflow-y: auto; /* Allow scrolling */
+        white-space: nowrap; /* Prevent wrapping */
+        text-align: left;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Centered Logo -->
+      <img id="logo" src="images/logo.webp" alt="PrestoCrawl Logo">
+      
+      <!-- Status Field -->
+      <div id="status">Status: Idle</div>
+
+      <label for="url">URL (default: current page):</label>
+      <input type="text" id="url" placeholder="Enter URL or leave empty for current page">
+      
+      <label for="depth">Link Depth (0–5):</label>
+      <select id="depth">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+      
+      <button id="downloadBtn">Start</button>
+
+      <!-- Scrollable Log Box -->
+      <div id="log"></div>
+    </div>
+    
+    <!-- Load JS -->
+    <script src="jszip.min.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
