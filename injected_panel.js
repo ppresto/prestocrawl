@@ -11,7 +11,7 @@
   container.style.width = "420px";
   container.style.height = "600px";
   container.style.backgroundColor = "white";
-  container.style.border = "2px solid #FF69B4"; // pink border
+  container.style.border = "2px solid #FF1493"; // pink border
   container.style.borderRadius = "15px";
   container.style.zIndex = "999999";
   container.style.boxShadow = "0 0 10px rgba(0,0,0,0.5)";
@@ -28,7 +28,7 @@
     <div id="panel-content" style="display: flex; flex-direction: column; height: 100%;">
       <!-- Header: Logo with external image -->
       <div id="header" style="padding: 10px; text-align: center; flex: 0 0 auto;">
-          <img id="logoImg" src="${chrome.runtime.getURL("images/logo.webp")}" alt="PrestoCrawl Logo" style="width: 90%; max-width: 350px; height: auto; max-height: 80px; margin: 0 auto;" />
+          <img id="logoImg" src="${chrome.runtime.getURL("images/logo.webp")}" alt="PrestoCrawl Logo" style="height: 60px; width: auto;" />
       </div>
       <!-- Input fields -->
       <div id="inputs" style="padding: 15px; flex: 0 0 auto;">
@@ -58,7 +58,7 @@
       </div>
       <!-- Start Button -->
       <div id="startButtonContainer" style="padding: 15px; flex: 0 0 auto; text-align: center;">
-        <button id="downloadBtn" style="width: 33%; padding: 10px; background-color: #FF69B4; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;">Start</button>
+        <button id="downloadBtn" style="width: 33%; padding: 10px; background-color: #FF1493; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;">Start</button>
       </div>
     </div>
   `;
@@ -158,6 +158,7 @@
     return path;
   }
   
+  // Modified getRenderedHTML: Added a delay after iframe onload to allow dynamic content to load.
   async function getRenderedHTML(url) {
     return new Promise(async (resolve, reject) => {
       if (url === window.location.href) {
@@ -172,21 +173,25 @@
           iframe.src = url;
           document.body.appendChild(iframe);
           iframe.onload = () => {
-            try {
-              let html = iframe.contentDocument.documentElement.outerHTML;
-              document.body.removeChild(iframe);
-              resolve(html);
-            } catch (e) {
-              document.body.removeChild(iframe);
-              reject(e);
-            }
+            // Wait an extra 2000ms after onload for dynamic content to render.
+            setTimeout(() => {
+              try {
+                let html = iframe.contentDocument.documentElement.outerHTML;
+                document.body.removeChild(iframe);
+                resolve(html);
+              } catch (e) {
+                document.body.removeChild(iframe);
+                reject(e);
+              }
+            }, 2000);
           };
+          // Adjust overall timeout to account for the extra delay.
           setTimeout(() => {
             if (iframe.parentNode) {
               document.body.removeChild(iframe);
             }
             reject(new Error("Iframe load timeout"));
-          }, 15000);
+          }, 17000);
         } else {
           const res = await fetch(url);
           const html = await res.text();

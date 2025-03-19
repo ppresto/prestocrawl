@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		}
+	],
+	"settings": {
+		"wiz.codePolicies.IAC Configuration": []
+	}
+}

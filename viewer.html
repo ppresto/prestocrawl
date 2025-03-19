@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Fetched Page Viewer</title>
+  <style>
+    /* Basic styling to mimic the original site’s look */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #fff;
+    }
+    header {
+      background: #007acc;
+      color: #fff;
+      padding: 10px 20px;
+      text-align: center;
+    }
+    #content {
+      padding: 20px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Fetched Page Viewer</h1>
+    <button id="openOriginal">Open Original</button>
+  </header>
+  <div id="content">
+    <!-- Rendered content will be injected here -->
+  </div>
+  <script>
+    // Helper function to get a URL query parameter
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+    
+    // Get the fetched content (passed via the "data" query parameter)
+    const encodedData = getQueryParam('data');
+    if (encodedData) {
+      const pageContent = decodeURIComponent(encodedData);
+      document.getElementById('content').innerHTML = pageContent;
+    } else {
+      document.getElementById('content').innerHTML = '<p>No content available.</p>';
+    }
+
+    // If an original URL is provided, wire up the "Open Original" button.
+    const originalUrl = getQueryParam('url');
+    document.getElementById('openOriginal').addEventListener('click', () => {
+      if (originalUrl) {
+        window.open(originalUrl, '_blank');
+      }
+    });
+  </script>
+</body>
+</html>
