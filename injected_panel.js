@@ -23,7 +23,7 @@
   // 2. Input fields for URL and link depth
   // 3. A dedicated one‑line status field (blue background, white text, curved)
   // 4. An output field for discovered URLs (no wrapping, scrollable) with a Copy button
-  // 5. A start button at the bottom
+  // 5. A Start button and a new Render Locally button at the bottom.
   container.innerHTML = `
     <div id="panel-content" style="display: flex; flex-direction: column; height: 100%;">
       <!-- Header: Logo with external image -->
@@ -56,9 +56,10 @@
       <div id="logOutput" style="margin: 0 15px 10px 15px; padding: 15px; flex: 1 1 auto; overflow-y: auto; overflow-x: auto; border: 1px solid blue; border-radius: 5px; background: white; color: black; white-space: nowrap; position: relative;">
         <!-- Discovered URLs will be listed here -->
       </div>
-      <!-- Start Button -->
-      <div id="startButtonContainer" style="padding: 15px; flex: 0 0 auto; text-align: center;">
-        <button id="downloadBtn" style="width: 33%; padding: 10px; background-color: #FF1493; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;">Start</button>
+      <!-- Buttons Container -->
+      <div id="buttonsContainer" style="padding: 15px; flex: 0 0 auto; text-align: center;">
+        <button id="downloadBtn" style="width: 30%; padding: 10px; background-color: #FF1493; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em; margin-right: 5%;">Start</button>
+        <button id="renderBtn" style="width: 30%; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;">Render Locally</button>
       </div>
     </div>
   `;
@@ -282,8 +283,7 @@
         try {
           html = await getRenderedHTML(url);
         } catch (err) {
-          const response = await fetch(url);
-          html = await response.text();
+          html = await (await fetch(url)).text();
         }
         const relativePath = getRelativePath(url);
         downloadedFiles[relativePath] = html;
@@ -367,4 +367,33 @@
       console.error("Error in main orchestration", ex);
     }
   });
+
+  // New functionality: Add Render Locally button event listener.
+  document.getElementById("renderBtn").addEventListener("click", async () => {
+    updateStatusField("Rendering current page locally...");
+    try {
+      // Fetch the rendered HTML for the current page.
+      const html = await getRenderedHTML(window.location.href);
+      // Create a blob from the HTML.
+      const blob = new Blob([html], { type: "text/html" });
+      const blobUrl = URL.createObjectURL(blob);
+      // Send message to background to open the render view.
+      chrome.runtime.sendMessage({
+        type: 'openRenderView',
+        blobUrl: blobUrl,
+        filename: "render.html"
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          updateStatusField("Render error: " + chrome.runtime.lastError.message);
+        } else if (!response.success) {
+          updateStatusField("Render error: " + response.error);
+        } else {
+          updateStatusField("Render view opened in new tab.");
+        }
+      });
+    } catch (e) {
+      updateStatusField("Error rendering page: " + e.message);
+    }
+  });
+
 })();

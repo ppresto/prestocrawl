@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Rendered Content</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f7f7f7;
+      }
+      #content {
+        padding: 20px;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content">Loading content...</div>
+    <script>
+      // Retrieve the 'data' query parameter from the URL.
+      const params = new URLSearchParams(window.location.search);
+      const dataParam = params.get('data');
+      const contentDiv = document.getElementById("content");
+
+      if (dataParam) {
+        try {
+          // Decode and parse the JSON data.
+          const dataObj = JSON.parse(decodeURIComponent(dataParam));
+          // The data object is expected to have a property 'content' with HTML.
+          if (dataObj && dataObj.content) {
+            contentDiv.innerHTML = dataObj.content;
+          } else {
+            contentDiv.innerText = "No renderable content found in data.";
+          }
+        } catch (e) {
+          contentDiv.innerText = "Error parsing content data: " + e;
+          console.error("Error parsing data parameter", e);
+        }
+      } else {
+        contentDiv.innerText = "No content data provided.";
+      }
+    </script>
+  </body>
+</html>

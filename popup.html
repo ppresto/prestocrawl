@@ -100,6 +100,8 @@
       </select>
       
       <button id="downloadBtn">Start</button>
+      <!-- New button to test the Render Locally feature -->
+      <button id="renderBtn">Render Locally</button>
 
       <!-- Scrollable Log Box -->
       <div id="log"></div>
@@ -108,5 +110,20 @@
     <!-- Load JS -->
     <script src="jszip.min.js"></script>
     <script src="popup.js"></script>
+    <script>
+      // Add event listener for the new Render Locally button.
+      document.getElementById("renderBtn").addEventListener("click", () => {
+        // In this example we pass a sample data payload. In a real scenario, you might pass the fetched HTML content.
+        chrome.runtime.sendMessage({
+          type: 'openRenderView',
+          data: {
+            content: "<h1>Sample Rendered Content</h1><p>This is a test of the render feature.</p>"
+          }
+        }, (response) => {
+          // Optional: Handle response from background.
+          console.log("openRenderView response:", response);
+        });
+      });
+    </script>
   </body>
 </html>
