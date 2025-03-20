@@ -19,26 +19,43 @@
   container.style.fontFamily = "'Segoe UI', sans-serif";
 
   // Build the inner layout:
-  // 1. Header (logo using external image)
-  // 2. Input fields for URL and link depth
+  // 1. Header (logo using external image) with an overlayed close button.
+  // 2. Input fields for URL and link depth (on the same line when possible)
   // 3. A dedicated one‑line status field (blue background, white text, curved)
   // 4. An output field for discovered URLs (no wrapping, scrollable) with a Copy button
   // 5. A start button at the bottom
   container.innerHTML = `
     <div id="panel-content" style="display: flex; flex-direction: column; height: 100%;">
-      <!-- Header: Logo with external image -->
-      <div id="header" style="padding: 10px; text-align: center; flex: 0 0 auto;">
-          <img id="logoImg" src="${chrome.runtime.getURL("images/logo.webp")}" alt="PrestoCrawl Logo" style="width: 90%; max-width: 350px; height: auto; max-height: 80px; margin: 0 auto;" />
+      <!-- Header: Logo with external image, full width -->
+      <div id="header" style="position: relative; padding: 0; margin: 0; flex: 0 0 auto;">
+          <img id="logoImg" src="${chrome.runtime.getURL("images/logo.webp")}" alt="PrestoCrawl Logo" style="display: block; width: 100%; height: auto; border-top-left-radius: 15px; border-top-right-radius: 15px;" />
+          <!-- Close Button overlaid on top-right of logo -->
+          <div id="closeButton" style="
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: transparent;
+            color: pink;
+            font-weight: bold;
+            font-size: 20px;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
+            ×
+          </div>
       </div>
       <!-- Input fields -->
-      <div id="inputs" style="padding: 15px; flex: 0 0 auto;">
-        <div style="margin-bottom: 10px;">
-          <label for="url" style="color: blue; display: block; margin-bottom: 5px;">URL:</label>
+      <div id="inputs" style="padding: 15px; flex: 0 0 auto; display: flex; gap: 10px; align-items: flex-start;">
+        <div style="flex: 1;">
+          <label for="url" style="color: blue; display: block; margin-bottom: 5px;">URL</label>
           <input type="text" id="url" style="width: 100%; padding: 8px; border: 1px solid blue; border-radius: 5px; background: white; color: black;" />
         </div>
-        <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-          <label for="depth" style="color: blue; margin: 0;">Link depth to crawl:</label>
-          <select id="depth" style="width: 150px; padding: 8px; border: 1px solid blue; border-radius: 5px; background: white; color: black;">
+        <div style="flex: 0 0 auto; display: flex; flex-direction: column; justify-content: flex-start;">
+          <label for="depth" style="color: blue; margin-bottom: 5px;">Link depth</label>
+          <select id="depth" style="width: auto; padding: 8px; border: 1px solid blue; border-radius: 5px; background: white; color: black;">
             <option value="0">0</option>
             <option value="1">1</option>
             <option value="2">2</option>
@@ -48,7 +65,7 @@
           </select>
         </div>
       </div>
-      <!-- New Status Field -->
+      <!-- Status Field -->
       <div id="statusField" style="margin: 0 15px 10px 15px; padding: 5px 10px; border: 2px solid blue; border-radius: 5px; background-color: blue; color: white; font-weight: bold; white-space: nowrap; flex: 0 0 auto;">
         Status: Idle
       </div>
@@ -68,6 +85,15 @@
   // Set default URL in the input field.
   document.getElementById("url").value = window.location.href;
 
+  // Event listener for close button.
+  const closeButton = document.getElementById("closeButton");
+  closeButton.addEventListener("click", () => {
+    const panel = document.getElementById("my-extension-panel");
+    if (panel) {
+      panel.remove();
+    }
+  });
+
   // Internal storage for discovered URLs.
   let discoveredLog = [];
   const MAX_LOG_LINES = 2000;
@@ -78,19 +104,21 @@
     document.getElementById("statusField").innerText = "Status: " + text;
   }
 
-  // Create a Copy button for the logOutput field.
+  // Create a Copy button for the logOutput field with updated styles.
   const logOutputContainer = document.getElementById("logOutput");
   const copyButton = document.createElement("button");
-  copyButton.innerText = "Copy";
+  // Use a copy emoji (📋) as an icon before the text.
+  copyButton.innerHTML = "📋 Copy";
+  copyButton.style.color = "gray";
   copyButton.style.position = "absolute";
   copyButton.style.top = "5px";
   copyButton.style.right = "5px";
   copyButton.style.padding = "5px 10px";
   copyButton.style.fontSize = "0.8em";
-  copyButton.style.border = "1px solid blue";
+  copyButton.style.border = "none";
   copyButton.style.borderRadius = "5px";
-  copyButton.style.background = "white";
-  copyButton.style.color = "blue";
+  copyButton.style.background = "transparent"; // light gray background
+  copyButton.style.color = "#333";
   copyButton.style.cursor = "pointer";
   copyButton.addEventListener("click", () => {
     // Copy only the discovered URLs (without the copy button).
