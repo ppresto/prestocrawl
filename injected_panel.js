@@ -23,7 +23,7 @@
   // 2. Input fields for URL and link depth
   // 3. A dedicated one‑line status field (blue background, white text, curved)
   // 4. An output field for discovered URLs (no wrapping, scrollable) with a Copy button
-  // 5. A Start button and a new Render Locally button at the bottom.
+  // 5. A start button at the bottom
   container.innerHTML = `
     <div id="panel-content" style="display: flex; flex-direction: column; height: 100%;">
       <!-- Header: Logo with external image -->
@@ -56,10 +56,10 @@
       <div id="logOutput" style="margin: 0 15px 10px 15px; padding: 15px; flex: 1 1 auto; overflow-y: auto; overflow-x: auto; border: 1px solid blue; border-radius: 5px; background: white; color: black; white-space: nowrap; position: relative;">
         <!-- Discovered URLs will be listed here -->
       </div>
-      <!-- Buttons Container -->
-      <div id="buttonsContainer" style="padding: 15px; flex: 0 0 auto; text-align: center;">
-        <button id="downloadBtn" style="width: 30%; padding: 10px; background-color: #FF1493; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em; margin-right: 5%;">Start</button>
-        <button id="renderBtn" style="width: 30%; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;">Render Locally</button>
+      <!-- Buttons at the bottom -->
+      <div id="startButtonContainer" style="padding: 15px; flex: 0 0 auto; text-align: center;">
+        <button id="downloadBtn" style="width: 33%; padding: 10px; background-color: #FF1493; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;">Start</button>
+        <button id="renderBtn" style="width: 33%; padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em; margin-left: 10px;">Render Locally</button>
       </div>
     </div>
   `;
@@ -94,7 +94,6 @@
   copyButton.style.color = "blue";
   copyButton.style.cursor = "pointer";
   copyButton.addEventListener("click", () => {
-    // Copy only the discovered URLs (without the copy button).
     navigator.clipboard.writeText(discoveredLog.join("\n"))
       .then(() => updateStatusField("Copied URLs to clipboard"))
       .catch(err => updateStatusField("Copy error: " + err.message));
@@ -110,7 +109,6 @@
     const displayMessages = discoveredLog.slice(-DISPLAY_LOG_LINES);
     const logOutput = document.getElementById("logOutput");
     logOutput.innerText = displayMessages.join("\n");
-    // Ensure the copy button remains visible.
     logOutput.appendChild(copyButton);
     logOutput.scrollLeft = logOutput.scrollWidth;
     logOutput.scrollTop = logOutput.scrollHeight;
@@ -159,7 +157,7 @@
     return path;
   }
   
-  // Modified getRenderedHTML: Added a delay after iframe onload to allow dynamic content to load.
+  // Modified getRenderedHTML: Added a delay after iframe onload.
   async function getRenderedHTML(url) {
     return new Promise(async (resolve, reject) => {
       if (url === window.location.href) {
@@ -174,7 +172,6 @@
           iframe.src = url;
           document.body.appendChild(iframe);
           iframe.onload = () => {
-            // Wait an extra 2000ms after onload for dynamic content to render.
             setTimeout(() => {
               try {
                 let html = iframe.contentDocument.documentElement.outerHTML;
@@ -186,7 +183,6 @@
               }
             }, 2000);
           };
-          // Adjust overall timeout to account for the extra delay.
           setTimeout(() => {
             if (iframe.parentNode) {
               document.body.removeChild(iframe);
@@ -368,32 +364,20 @@
     }
   });
 
-  // New functionality: Add Render Locally button event listener.
-  document.getElementById("renderBtn").addEventListener("click", async () => {
-    updateStatusField("Rendering current page locally...");
-    try {
-      // Fetch the rendered HTML for the current page.
-      const html = await getRenderedHTML(window.location.href);
-      // Create a blob from the HTML.
-      const blob = new Blob([html], { type: "text/html" });
-      const blobUrl = URL.createObjectURL(blob);
-      // Send message to background to open the render view.
-      chrome.runtime.sendMessage({
-        type: 'openRenderView',
-        blobUrl: blobUrl,
-        filename: "render.html"
-      }, (response) => {
-        if (chrome.runtime.lastError) {
-          updateStatusField("Render error: " + chrome.runtime.lastError.message);
-        } else if (!response.success) {
-          updateStatusField("Render error: " + response.error);
-        } else {
-          updateStatusField("Render view opened in new tab.");
-        }
-      });
-    } catch (e) {
-      updateStatusField("Error rendering page: " + e.message);
-    }
+  // New functionality: Add "Render Locally" button click handler.
+  document.getElementById("renderBtn").addEventListener("click", () => {
+    // For this example, we will use the current document’s HTML content.
+    // In your use case, you might want to use the fetched content or a specific page's HTML.
+    const content = document.documentElement.outerHTML;
+    chrome.runtime.sendMessage({ 
+      type: "openRenderView", 
+      data: { html: content } 
+    }, (response) => {
+      if (response && response.success) {
+        updateStatusField("Render view opened successfully");
+      } else {
+        updateStatusField("Render error: " + (response ? response.error : "No response"));
+      }
+    });
   });
-
 })();

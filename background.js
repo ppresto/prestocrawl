@@ -23,20 +23,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else {
       sendResponse({ success: false, error: "chrome.downloads API not available" });
     }
-    return true; // Keep the messaging channel open for asynchronous response.
-  } else if (message.type === 'renderPage') {
-    // New functionality: Open a new tab that loads render.html to display the fetched page locally.
-    // The render.html page should be prepared to handle the query parameters passed below.
-    const renderUrl = chrome.runtime.getURL('render.html') +
-      '?blobUrl=' + encodeURIComponent(message.blobUrl) +
-      '&filename=' + encodeURIComponent(message.filename);
-    chrome.tabs.create({ url: renderUrl }, (tab) => {
-      if (chrome.runtime.lastError) {
-        sendResponse({ success: false, error: chrome.runtime.lastError.message });
-      } else {
-        sendResponse({ success: true, tabId: tab.id });
-      }
-    });
-    return true; // Keep the messaging channel open for asynchronous response.
+    return true; // Keep messaging channel open.
+  }
+
+  // New functionality: Listen for "openRenderView" messages.
+  if (message.type === 'openRenderView') {
+    // Ensure that valid content was provided.
+    if (!message.data || !message.data.html) {
+      sendResponse({ success: false, error: "No content provided for rendering." });
+      return true;
+    }
+    try {
+      const data = message.data;
+      const encodedData = encodeURIComponent(JSON.stringify(data));
+      chrome.tabs.create({
+        url: chrome.runtime.getURL("render.html") + "?data=" + encodedData
+      }, (tab) => {
+        sendResponse({ success: true });
+      });
+    } catch (error) {
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
   }
 });
