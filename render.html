@@ -22,20 +22,62 @@
   <body>
     <div id="content">Loading content...</div>
     <script>
-      const contentDiv = document.getElementById("content");
+      (function() {
+        const contentDiv = document.getElementById("content");
 
-      chrome.storage.local.get("renderData", function(result) {
-        if (chrome.runtime.lastError) {
-          contentDiv.innerText = "Error retrieving content data: " + chrome.runtime.lastError.message;
-          console.error("Storage error:", chrome.runtime.lastError);
-          return;
+        // Helper function to render data.
+        function renderContent(data) {
+          if (data && data.html) {
+            contentDiv.innerHTML = data.html;
+          } else {
+            contentDiv.innerText = "No renderable content found.";
+          }
         }
-        if (result && result.renderData && result.renderData.html) {
-          contentDiv.innerHTML = result.renderData.html;
-        } else {
-          contentDiv.innerText = "No renderable content found in storage.";
+
+        // Fallback: parse content from the URL's data query parameter.
+        function tryRenderFromQueryParam() {
+          const params = new URLSearchParams(window.location.search);
+          const dataParam = params.get('data');
+          if (dataParam) {
+            try {
+              const dataObj = JSON.parse(decodeURIComponent(dataParam));
+              renderContent(dataObj);
+            } catch (e) {
+              contentDiv.innerText = "Error parsing content data from URL: " + e.message;
+              console.error("Error parsing query param data", e);
+            }
+          } else {
+            contentDiv.innerText = "No renderable content provided.";
+          }
         }
-      });
+
+        try {
+          // Check if the chrome storage API is available.
+          if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.get("renderData", function(result) {
+              if (chrome.runtime.lastError) {
+                contentDiv.innerText = "Error retrieving content data: " + chrome.runtime.lastError.message;
+                console.error("Storage error:", chrome.runtime.lastError);
+                // Fallback to query parameter.
+                tryRenderFromQueryParam();
+                return;
+              }
+              if (result && result.renderData) {
+                renderContent(result.renderData);
+              } else {
+                // Fallback to query parameter if no data in storage.
+                tryRenderFromQueryParam();
+              }
+            });
+          } else {
+            // If chrome.storage is not available, try the query parameter.
+            tryRenderFromQueryParam();
+          }
+        } catch (e) {
+          contentDiv.innerText = "Exception: " + e.message;
+          console.error(e);
+        }
+      })();
     </script>
   </body>
 </html>
