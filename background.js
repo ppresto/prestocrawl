@@ -28,6 +28,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // New functionality: Listen for "openRenderView" messages.
   if (message.type === 'openRenderView') {
+    // If message.data is a string, wrap it in an object.
+    if (typeof message.data === 'string') {
+      message.data = { html: message.data };
+    }
     // Ensure that valid content was provided.
     if (!message.data || !message.data.html) {
       sendResponse({ success: false, error: "No content provided for rendering." });
@@ -35,11 +39,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     try {
       const data = message.data;
-      const encodedData = encodeURIComponent(JSON.stringify(data));
-      chrome.tabs.create({
-        url: chrome.runtime.getURL("render.html") + "?data=" + encodedData
-      }, (tab) => {
-        sendResponse({ success: true });
+      // Instead of encoding large HTML content into a URL query string,
+      // store the data in chrome.storage.local.
+      chrome.storage.local.set({ renderData: data }, () => {
+        if (chrome.runtime.lastError) {
+          sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          // Open render.html without passing data via the URL.
+          chrome.tabs.create({
+            url: chrome.runtime.getURL("render.html")
+          }, (tab) => {
+            sendResponse({ success: true });
+          });
+        }
       });
     } catch (error) {
       sendResponse({ success: false, error: error.message });
