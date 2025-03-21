@@ -1,7 +1,7 @@
 chrome.action.onClicked.addListener((tab) => {
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    files: ["jszip.min.js", "injected_panel.js"]
+    files: ["jszip.min.js", "readability.js", "injected_panel.js"]
   });
 });
 
