@@ -101,6 +101,8 @@
       </select>
       
       <button id="downloadBtn">Start</button>
+      <!-- New button for testing the Render Readable feature -->
+      <button id="renderReadableTestBtn">Render Readable</button>
 
       <!-- Scrollable Log Box -->
       <div id="log"></div>
@@ -108,6 +110,19 @@
     
     <!-- Load JS -->
     <script src="jszip.min.js"></script>
-    <script src="popup.js"></script>
+    <script>
+      // Add event listener for the Render Readable test button.
+      document.getElementById("renderReadableTestBtn").addEventListener("click", () => {
+        // For testing, send a message to the background script with type "openReadableView"
+        // and pass the current page's HTML (or any desired content).
+        chrome.runtime.sendMessage({ type: 'openReadableView', html: document.documentElement.outerHTML }, (response) => {
+          if (response && response.success) {
+            document.getElementById("status").innerText = "Status: Opened Readable View";
+          } else {
+            document.getElementById("status").innerText = "Status: Error: " + (response && response.error ? response.error : "Unknown error");
+          }
+        });
+      });
+    </script>
   </body>
 </html>
