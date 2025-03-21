@@ -2,6 +2,51 @@
   // If the panel is already injected, do not inject it again.
   if (document.getElementById("my-extension-panel")) return;
 
+  // Helper function: process video in a fetched page's HTML.
+  // It searches for a <video> element and then for a source with an m3u8 URL.
+  // Then it fetches and parses the manifest using the m3u8-parser library
+  // and returns the list of segment URLs.
+  async function processVideo(html) {
+    const domParser = new DOMParser();
+    const doc = domParser.parseFromString(html, "text/html");
+    let videoEl = doc.querySelector("video");
+    if (!videoEl) {
+      updateStatusField("No video element found on page.");
+      return null;
+    }
+    let m3u8Url = "";
+    if (videoEl.src && videoEl.src.endsWith(".m3u8")) {
+      m3u8Url = videoEl.src;
+    } else {
+      const sourceEl = videoEl.querySelector("source[src$='.m3u8']");
+      if (sourceEl) {
+        m3u8Url = sourceEl.src;
+      }
+    }
+    if (m3u8Url) {
+      updateStatusField("Video manifest found: " + m3u8Url);
+      try {
+        const res = await fetch(m3u8Url);
+        const manifestText = await res.text();
+        // Using m3u8-parser (ensure you've added m3u8-parser.min.js to your codebase
+        // and injected it via background.js so that it's available as m3u8Parser).
+        const parser = new m3u8Parser.Parser();
+        parser.push(manifestText);
+        parser.end();
+        const manifest = parser.manifest;
+        const segments = manifest.segments ? manifest.segments.map(s => s.uri) : [];
+        updateStatusField("Video segments extracted: " + segments.join(", "));
+        return segments;
+      } catch (err) {
+        updateStatusField("Error fetching/parsing manifest: " + err.message);
+        return null;
+      }
+    } else {
+      updateStatusField("Video element found but no m3u8 manifest URL.");
+      return null;
+    }
+  }
+
   // Create the panel container with dynamic sizing.
   const container = document.createElement("div");
   container.id = "my-extension-panel";
@@ -443,6 +488,19 @@
               }
             }
           } catch (e) { console.error("Readability extraction error:", e); }
+        }
+        if (document.getElementById("enableVideos").checked) {
+          try {
+            const videoSegments = await processVideo(html);
+            if (videoSegments) {
+              updateStatusField("Video segments extracted: " + videoSegments.join(", "));
+              // Optionally, store video segments under a special key.
+              downloadedFiles["video_" + getRelativePath(url)] = videoSegments;
+            }
+          } catch (e) {
+            console.error("Video processing error:", e);
+            updateStatusField("Video processing error: " + e.message);
+          }
         }
         const relativePath = getRelativePath(url);
         downloadedFiles[relativePath] = html;
