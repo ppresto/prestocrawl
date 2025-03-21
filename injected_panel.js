@@ -18,13 +18,50 @@
   container.style.overflow = "hidden";
   container.style.fontFamily = "'Segoe UI', sans-serif";
 
-  // Build the inner layout:
-  // 1. Header (logo using external image) with an overlayed close button.
-  // 2. Input fields for URL and link depth (on the same line when possible)
-  // 3. A dedicated one‑line status field (blue background, white text, curved)
-  // 4. An output field for discovered URLs (no wrapping, scrollable) with a Copy button
-  // 5. A start button at the bottom
+  // Build the inner layout.
+  // A style block is added first for the switch toggle.
   container.innerHTML = `
+    <style>
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 24px;
+      }
+      .switch input { 
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: gray;
+        transition: 0.4s;
+        border-radius: 24px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: pink;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+      .switch input:checked + .slider {
+        background-color: blue;
+      }
+      .switch input:checked + .slider:before {
+        transform: translateX(16px);
+      }
+    </style>
     <div id="panel-content" style="display: flex; flex-direction: column; height: 100%;">
       <!-- Header: Logo with external image, full width -->
       <div id="header" style="position: relative; padding: 0; margin: 0; flex: 0 0 auto;">
@@ -47,7 +84,7 @@
             ×
           </div>
       </div>
-      <!-- Input fields -->
+      <!-- Input fields: URL and Link depth on the same row -->
       <div id="inputs" style="padding: 15px; flex: 0 0 auto; display: flex; gap: 10px; align-items: flex-start;">
         <div style="flex: 1;">
           <label for="url" style="color: blue; display: block; margin-bottom: 5px;">URL</label>
@@ -64,6 +101,14 @@
             <option value="5">5</option>
           </select>
         </div>
+      </div>
+      <!-- Readability Toggle -->
+      <div id="readabilityToggle" style="margin: 0 15px 10px 15px; flex: 0 0 auto; display: flex; align-items: center;">
+        <label class="switch" style="margin: 0;">
+          <input type="checkbox" id="enableReadability">
+          <span class="slider"></span>
+        </label>
+        <span style="color: blue; font-weight: bold; margin-left: 8px;">Enable Readability</span>
       </div>
       <!-- Status Field -->
       <div id="statusField" style="margin: 0 15px 10px 15px; padding: 5px 10px; border: 2px solid blue; border-radius: 5px; background-color: blue; color: white; font-weight: bold; white-space: nowrap; flex: 0 0 auto;">
@@ -109,7 +154,6 @@
   const copyButton = document.createElement("button");
   // Use a copy emoji (📋) as an icon before the text.
   copyButton.innerHTML = "📋 Copy";
-  copyButton.style.color = "gray";
   copyButton.style.position = "absolute";
   copyButton.style.top = "5px";
   copyButton.style.right = "5px";
@@ -117,7 +161,7 @@
   copyButton.style.fontSize = "0.8em";
   copyButton.style.border = "none";
   copyButton.style.borderRadius = "5px";
-  copyButton.style.background = "transparent"; // light gray background
+  copyButton.style.background = "transparent";
   copyButton.style.color = "#333";
   copyButton.style.cursor = "pointer";
   copyButton.addEventListener("click", () => {
@@ -186,10 +230,25 @@
     return path;
   }
   
+  // Updated getRenderedHTML:
+  // If fetching the current page, remove the panel if it exists.
   async function getRenderedHTML(url) {
     return new Promise(async (resolve, reject) => {
       if (url === window.location.href) {
-        resolve(document.documentElement.outerHTML);
+        if (document.getElementById("my-extension-panel")) {
+          try {
+            let clone = document.documentElement.cloneNode(true);
+            let panel = clone.querySelector("#my-extension-panel");
+            if (panel) {
+              panel.remove();
+            }
+            resolve(clone.outerHTML);
+          } catch (e) {
+            reject(e);
+          }
+        } else {
+          resolve(document.documentElement.outerHTML);
+        }
         return;
       }
       try {
@@ -308,6 +367,26 @@
           const response = await fetch(url);
           html = await response.text();
         }
+        // If the Enable Readability toggle is checked, process the HTML.
+        if (document.getElementById("enableReadability").checked) {
+          try {
+            if (typeof Readability === "undefined") {
+              console.error("Readability library is not loaded.");
+              updateStatusField("Readability library not loaded");
+            } else {
+              updateStatusField("Processing with Readability...");
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, "text/html");
+              const article = new Readability(doc).parse();
+              if (article && article.content) {
+                // Wrap the article content in basic HTML and include the reader.css link.
+                html = `<html><head><meta charset="UTF-8"><link rel="stylesheet" type="text/css" href="../reader.css"></head><body>${article.content}</body></html>`;
+              }
+            }
+          } catch (e) {
+            console.error("Readability extraction error:", e);
+          }
+        }
         const relativePath = getRelativePath(url);
         downloadedFiles[relativePath] = html;
       } catch (e) {
@@ -322,9 +401,32 @@
   async function zipFiles() {
     updateStatusField("Zipping " + discoveredPages.length + " pages");
     const zip = new JSZip();
+    // For each downloaded file, if readability is enabled, ensure the reader.css link is inserted.
+    const readabilityEnabled = document.getElementById("enableReadability").checked;
     for (const [path, content] of Object.entries(downloadedFiles)) {
-      zip.file(path, content);
+      let modifiedContent = content;
+      if (readabilityEnabled && modifiedContent.includes("<head>")) {
+        // Calculate the depth based on the number of directory separators in the relative path.
+        const depth = (path.match(/\//g) || []).length;
+        let cssPath = "";
+        for (let i = 0; i < depth; i++) {
+          cssPath += "../";
+        }
+        cssPath += "reader.css";
+        modifiedContent = modifiedContent.replace(/<\/head>/i, `<link rel="stylesheet" type="text/css" href="${cssPath}"></head>`);
+      }
+      zip.file(path, modifiedContent);
     }
+    // Also include the reader.css file in the zip.
+    try {
+      const cssUrl = chrome.runtime.getURL("reader.css");
+      const cssResponse = await fetch(cssUrl);
+      const cssContent = await cssResponse.text();
+      zip.file("reader.css", cssContent);
+    } catch (e) {
+      console.error("Error loading reader.css", e);
+    }
+  
     try {
       const blob = await zip.generateAsync({ type: "blob" });
       return blob;

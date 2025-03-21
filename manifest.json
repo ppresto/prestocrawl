@@ -17,7 +17,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["images/logo.webp"],
+      "resources": ["images/logo.webp", "readable.html", "reader.css"],
       "matches": ["<all_urls>"]
     }
   ]

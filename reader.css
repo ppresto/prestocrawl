@@ -1,0 +1,80 @@
+/* General page styling */
+body {
+    background-color: #fdfdfd;
+    color: #333;
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.6;
+    padding: 20px;
+    margin: 0 auto;
+    max-width: 800px;
+  }
+  
+  /* Container for the readable content */
+  #readable-content {
+    background-color: #fff;
+    padding: 30px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Headings styling */
+  #readable-content h1,
+  #readable-content h2,
+  #readable-content h3,
+  #readable-content h4,
+  #readable-content h5,
+  #readable-content h6 {
+    margin-top: 1.2em;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+  }
+  
+  /* Paragraphs */
+  #readable-content p {
+    margin: 1em 0;
+  }
+  
+  /* Links */
+  #readable-content a {
+    color: #0645ad;
+    text-decoration: none;
+  }
+  #readable-content a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Blockquotes */
+  #readable-content blockquote {
+    border-left: 3px solid #ddd;
+    padding-left: 10px;
+    margin: 1em 0;
+    color: #555;
+    font-style: italic;
+  }
+  
+  /* Images */
+  #readable-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  
+  /* Code blocks and inline code */
+  #readable-content pre, 
+  #readable-content code {
+    background-color: #f4f4f4;
+    padding: 8px;
+    border-radius: 4px;
+    font-family: Consolas, "Courier New", monospace;
+    overflow-x: auto;
+  }
+  
+  /* Lists */
+  #readable-content ul,
+  #readable-content ol {
+    margin: 1em 0;
+    padding-left: 40px;
+  }
+  
