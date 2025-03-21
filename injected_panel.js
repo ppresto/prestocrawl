@@ -2,6 +2,8 @@
   // If the panel is already injected, do not inject it again.
   if (document.getElementById("my-extension-panel")) return;
 
+  // (No dynamic injection of readability.js here – it's injected by background.js)
+
   // Create the panel container with an easy-on-the-eyes font.
   const container = document.createElement("div");
   container.id = "my-extension-panel";
@@ -19,7 +21,6 @@
   container.style.fontFamily = "'Segoe UI', sans-serif";
 
   // Build the inner layout.
-  // A style block is added first for the custom switch toggle.
   container.innerHTML = `
     <style>
       .switch {
@@ -118,9 +119,8 @@
         </label>
         <span style="color: blue; font-weight: bold; margin-left: 8px;">Download Videos</span>
       </div>
-      <!-- Log Output Field for discovered URLs (shrunken to show last ~3 lines) -->
+      <!-- Log Output Field -->
       <div id="logOutput" style="margin: 0 15px 10px 15px; padding: 15px; height: 60px; overflow-y: auto; overflow-x: auto; border: 1px solid blue; border-radius: 5px; background: white; color: black; white-space: nowrap; position: relative;">
-        <!-- Discovered URLs will be listed here -->
       </div>
       <!-- Status Field (clickable to toggle expansion, with full history stored) -->
       <div id="statusField" style="margin: 0 15px 10px 15px; padding: 5px 10px; height: 30px; overflow: hidden; border: 2px solid blue; border-radius: 5px; background-color: blue; color: white; font-weight: bold; white-space: nowrap; cursor: pointer; flex: 0 0 auto;">
@@ -135,10 +135,10 @@
 
   document.body.appendChild(container);
 
-  // Set default URL in the input field.
+  // Set default URL.
   document.getElementById("url").value = window.location.href;
 
-  // Event listener for close button.
+  // Close button.
   const closeButton = document.getElementById("closeButton");
   closeButton.addEventListener("click", () => {
     const panel = document.getElementById("my-extension-panel");
@@ -147,25 +147,22 @@
     }
   });
 
-  // Event listener for Status Field to toggle expansion.
+  // Status field toggle.
   const statusField = document.getElementById("statusField");
   let statusExpanded = false;
   statusField.addEventListener("click", () => {
     if (statusExpanded) {
-      // Collapse: set height back to 30px, hide overflow, and restore collapsed colors.
       statusField.style.height = "30px";
       statusField.style.overflow = "hidden";
       statusField.style.backgroundColor = "blue";
       statusField.style.color = "white";
     } else {
-      // Expand: set height to 150px, allow scrolling, and change colors for expanded view.
       statusField.style.height = "150px";
       statusField.style.overflow = "auto";
       statusField.style.backgroundColor = "white";
       statusField.style.color = "blue";
     }
     statusExpanded = !statusExpanded;
-    // Update text display based on current history.
     const history = statusField.dataset.history ? statusField.dataset.history.split("\n") : [];
     if (!statusExpanded) {
       const lastLine = history[history.length - 1];
@@ -175,31 +172,24 @@
     }
   });
 
-  // Internal storage for discovered URLs.
+  // Logging and copy button setup.
   let discoveredLog = [];
   const MAX_LOG_LINES = 2000;
   const DISPLAY_LOG_LINES = 10;
-
-  // Function to update the status field.
   function updateStatusField(text) {
-    // Append the new status text to the full history stored in the statusField's dataset.
     let history = statusField.dataset.history ? statusField.dataset.history.split("\n") : [];
     history.push(text);
     statusField.dataset.history = history.join("\n");
-    // Always display the latest line when collapsed.
     if (!statusExpanded) {
       const lastLine = history[history.length - 1];
       statusField.innerText = "Status: " + lastLine;
     } else {
-      // When expanded, show full history.
       statusField.innerText = "Status:\n" + history.join("\n");
     }
   }
 
-  // Create a Copy button for the logOutput field with updated styles.
   const logOutputContainer = document.getElementById("logOutput");
   const copyButton = document.createElement("button");
-  // Use a copy emoji (📋) as an icon before the text.
   copyButton.innerHTML = "📋 Copy";
   copyButton.style.position = "absolute";
   copyButton.style.top = "5px";
@@ -212,14 +202,12 @@
   copyButton.style.color = "#333";
   copyButton.style.cursor = "pointer";
   copyButton.addEventListener("click", () => {
-    // Copy only the discovered URLs (without the copy button).
     navigator.clipboard.writeText(discoveredLog.join("\n"))
       .then(() => updateStatusField("Copied URLs to clipboard"))
       .catch(err => updateStatusField("Copy error: " + err.message));
   });
   logOutputContainer.appendChild(copyButton);
 
-  // Function to append a new discovered URL.
   function appendLog(message) {
     discoveredLog.push(message);
     if (discoveredLog.length > MAX_LOG_LINES) {
@@ -228,13 +216,11 @@
     const displayMessages = discoveredLog.slice(-DISPLAY_LOG_LINES);
     const logOutput = document.getElementById("logOutput");
     logOutput.innerText = displayMessages.join("\n");
-    // Ensure the copy button remains visible.
     logOutput.appendChild(copyButton);
     logOutput.scrollLeft = logOutput.scrollWidth;
     logOutput.scrollTop = logOutput.scrollHeight;
   }
 
-  // Helper functions.
   function normalizeUrl(url) {
     try {
       let urlObj = new URL(url);
@@ -249,10 +235,7 @@
   function shouldSkipUrl(url) {
     try {
       let path = new URL(url).pathname.toLowerCase();
-      const disallowed = [
-        ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg",
-        ".ico", ".pdf", ".zip", ".json", ".xml", ".woff", ".woff2", ".ttf"
-      ];
+      const disallowed = [".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".pdf", ".zip", ".json", ".xml", ".woff", ".woff2", ".ttf"];
       return disallowed.some(ext => path.endsWith(ext));
     } catch (e) {
       console.error("Error in shouldSkipUrl", url, e);
@@ -263,22 +246,13 @@
   function getRelativePath(url) {
     let urlObj = new URL(url);
     let path = urlObj.pathname;
-    if (path.endsWith("/")) {
-      path += "index.html";
-    }
-    if (path === "" || path === "/") {
-      path = "index.html";
-    } else if (!/\.[a-z0-9]+$/i.test(path)) {
-      path += ".html";
-    }
-    if (path.startsWith("/")) {
-      path = path.substring(1);
-    }
+    if (path.endsWith("/")) { path += "index.html"; }
+    if (path === "" || path === "/") { path = "index.html"; }
+    else if (!/\.[a-z0-9]+$/i.test(path)) { path += ".html"; }
+    if (path.startsWith("/")) { path = path.substring(1); }
     return path;
   }
   
-  // Updated getRenderedHTML:
-  // If fetching the current page, remove the panel if it exists.
   async function getRenderedHTML(url) {
     return new Promise(async (resolve, reject) => {
       if (url === window.location.href) {
@@ -286,16 +260,10 @@
           try {
             let clone = document.documentElement.cloneNode(true);
             let panel = clone.querySelector("#my-extension-panel");
-            if (panel) {
-              panel.remove();
-            }
+            if (panel) { panel.remove(); }
             resolve(clone.outerHTML);
-          } catch (e) {
-            reject(e);
-          }
-        } else {
-          resolve(document.documentElement.outerHTML);
-        }
+          } catch (e) { reject(e); }
+        } else { resolve(document.documentElement.outerHTML); }
         return;
       }
       try {
@@ -316,9 +284,7 @@
             }
           };
           setTimeout(() => {
-            if (iframe.parentNode) {
-              document.body.removeChild(iframe);
-            }
+            if (iframe.parentNode) { document.body.removeChild(iframe); }
             reject(new Error("Iframe load timeout"));
           }, 15000);
         } else {
@@ -326,9 +292,7 @@
           const html = await res.text();
           resolve(html);
         }
-      } catch (e) {
-        reject(e);
-      }
+      } catch (e) { reject(e); }
     });
   }
 
@@ -346,9 +310,8 @@
     if (depth <= 0) return;
     try {
       let html;
-      try {
-        html = await getRenderedHTML(url);
-      } catch (err) {
+      try { html = await getRenderedHTML(url); }
+      catch (err) {
         const res = await fetch(url);
         html = await res.text();
       }
@@ -371,13 +334,9 @@
           if (new URL(linkUrl).hostname === startDomain && !shouldSkipUrl(linkUrl)) {
             await discoverPages(linkUrl, depth - 1);
           }
-        } catch (e) {
-          // Ignore invalid URLs.
-        }
+        } catch (e) { }
       }
-    } catch (e) {
-      console.error("Error during discovery for", url, e);
-    }
+    } catch (e) { console.error("Error during discovery for", url, e); }
   }
   
   async function runInPool(tasks, poolLimit) {
@@ -392,9 +351,7 @@
       const e = p.then(() => executing.splice(executing.indexOf(e), 1));
       executing.push(e);
       let r = Promise.resolve();
-      if (executing.length >= poolLimit) {
-        r = Promise.race(executing);
-      }
+      if (executing.length >= poolLimit) { r = Promise.race(executing); }
       await r;
       return enqueue();
     };
@@ -408,12 +365,13 @@
       updateStatusField(`Fetching (${index + 1}/${discoveredPages.length}): ${url}`);
       try {
         let html;
-        try {
-          html = await getRenderedHTML(url);
-        } catch (err) {
+        try { html = await getRenderedHTML(url); }
+        catch (err) {
           const response = await fetch(url);
           html = await response.text();
         }
+        // Debug: log the current Readability value.
+        console.log("window.Readability:", window.Readability);
         // If the Enable Readability toggle is checked, process the HTML.
         if (document.getElementById("enableReadability").checked) {
           try {
@@ -426,13 +384,10 @@
               const doc = parser.parseFromString(html, "text/html");
               const article = new Readability(doc).parse();
               if (article && article.content) {
-                // Wrap the article content in basic HTML and include the reader.css link.
                 html = `<html><head><meta charset="UTF-8"><link rel="stylesheet" type="text/css" href="../reader.css"></head><body>${article.content}</body></html>`;
               }
             }
-          } catch (e) {
-            console.error("Readability extraction error:", e);
-          }
+          } catch (e) { console.error("Readability extraction error:", e); }
         }
         const relativePath = getRelativePath(url);
         downloadedFiles[relativePath] = html;
@@ -448,41 +403,31 @@
   async function zipFiles() {
     updateStatusField("Zipping " + discoveredPages.length + " pages");
     const zip = new JSZip();
-    // For each downloaded file, if readability is enabled, ensure the reader.css link is inserted.
     const readabilityEnabled = document.getElementById("enableReadability").checked;
     for (const [path, content] of Object.entries(downloadedFiles)) {
       let modifiedContent = content;
       if (readabilityEnabled && modifiedContent.includes("<head>")) {
-        // Calculate the depth based on the number of directory separators in the relative path.
         const depth = (path.match(/\//g) || []).length;
         let cssPath = "";
-        for (let i = 0; i < depth; i++) {
-          cssPath += "../";
-        }
+        for (let i = 0; i < depth; i++) { cssPath += "../"; }
         cssPath += "reader.css";
         modifiedContent = modifiedContent.replace(/<\/head>/i, `<link rel="stylesheet" type="text/css" href="${cssPath}"></head>`);
       }
       zip.file(path, modifiedContent);
     }
-    // Also include the reader.css file in the zip.
     try {
       const cssUrl = chrome.runtime.getURL("reader.css");
       const cssResponse = await fetch(cssUrl);
       const cssContent = await cssResponse.text();
       zip.file("reader.css", cssContent);
-    } catch (e) {
-      console.error("Error loading reader.css", e);
-    }
+    } catch (e) { console.error("Error loading reader.css", e); }
   
     try {
       const blob = await zip.generateAsync({ type: "blob" });
       return blob;
-    } catch (e) {
-      throw new Error("Error generating ZIP: " + e);
-    }
+    } catch (e) { throw new Error("Error generating ZIP: " + e); }
   }
   
-  // Updated triggerZipDownload with three separate status messages.
   function triggerZipDownload(blob, domain) {
     const blobUrl = URL.createObjectURL(blob);
     const filename = `${domain}.zip`;
@@ -511,15 +456,10 @@
       visited = new Set();
       downloadedFiles = {};
       discoveredLog = [];
-      // Do not reset the status history here so that the previous run's history is retained.
-      // If you wish to reset, uncomment the following line:
-      // statusField.dataset.history = "";
-      
       updateStatusField("Idle");
 
       let inputUrl = document.getElementById("url").value.trim();
       let startUrl = inputUrl ? inputUrl : window.location.href;
-
       startDomain = new URL(startUrl).hostname;
       const depth = parseInt(document.getElementById("depth").value, 10);
 

@@ -2784,3 +2784,8 @@ function Readability(doc, options) {
     /* global module */
     module.exports = Readability;
   }
+
+  if (typeof window !== "undefined") {
+    window.Readability = Readability;
+  }
+  
