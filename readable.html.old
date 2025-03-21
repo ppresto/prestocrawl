@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Readable View</title>
+    <link rel="stylesheet" type="text/css" href="reader.css">
+  </head>
+  <body>
+    <div id="readable-content">Loading readable content...</div>
+    <script>
+      // Retrieve the 'readableData' from chrome.storage
+      chrome.storage.local.get("readableData", function(result) {
+        const container = document.getElementById("readable-content");
+        if (chrome.runtime.lastError) {
+          container.innerText = "Error retrieving readable content: " + chrome.runtime.lastError.message;
+          console.error(chrome.runtime.lastError);
+          return;
+        }
+        if (result && result.readableData && result.readableData.html) {
+          container.innerHTML = result.readableData.html;
+        } else {
+          container.innerText = "No readable content found.";
+        }
+      });
+    </script>
+  </body>
+</html>

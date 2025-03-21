@@ -1,0 +1,19 @@
+// popup.js
+document.getElementById("testReadableBtn").addEventListener("click", () => {
+  // Send a message to the background (or injected panel) to test the readable view.
+  // For example, this can send the current page's HTML.
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        type: "openReadableView",
+        html: document.documentElement.outerHTML
+      }, (response) => {
+        if (response && response.success) {
+          console.log("Readable view test initiated.");
+        } else {
+          console.error("Error initiating readable view:", response && response.error);
+        }
+      });
+    }
+  });
+});

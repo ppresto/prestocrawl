@@ -1,3 +1,8 @@
+// injected_panel.js
+// This file is now an ES module (if needed, update your manifest to load it as such)
+// Otherwise, you can simply include it as a normal script.
+import { normalizeUrl, shouldSkipUrl, getRelativePath } from './utils/urlUtils.js';
+
 (function(){
   // If the panel is already injected, do not inject it again.
   if (document.getElementById("my-extension-panel")) return;

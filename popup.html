@@ -24,10 +24,10 @@
         display: block;
         width: 90%; /* Takes up most of the width */
         max-width: 350px;
-        height: auto; /* Allow natural height */
-        max-height: 80px; /* Reduce height */
+        height: auto;
+        max-height: 80px;
         margin: 0 auto 10px;
-        border-radius: 15px; /* Rounded edges for the logo */
+        border-radius: 15px;
       }
       label {
         color: blue;
@@ -72,8 +72,8 @@
         border: 1px solid blue;
         border-radius: 5px;
         height: 100px;
-        overflow-y: auto; /* Allow scrolling */
-        white-space: nowrap; /* Prevent wrapping */
+        overflow-y: auto;
+        white-space: nowrap;
         text-align: left;
         font-size: 0.9em;
       }
@@ -100,9 +100,8 @@
         <option value="5">5</option>
       </select>
       
-      <button id="downloadBtn">Start</button>
-      <!-- New button for testing the Render Readable feature -->
-      <button id="renderReadableTestBtn">Render Readable</button>
+      <!-- Test Button for Readable View (optional) -->
+      <button id="testReadableBtn">Test Readable View</button>
 
       <!-- Scrollable Log Box -->
       <div id="log"></div>
@@ -110,19 +109,6 @@
     
     <!-- Load JS -->
     <script src="jszip.min.js"></script>
-    <script>
-      // Add event listener for the Render Readable test button.
-      document.getElementById("renderReadableTestBtn").addEventListener("click", () => {
-        // For testing, send a message to the background script with type "openReadableView"
-        // and pass the current page's HTML (or any desired content).
-        chrome.runtime.sendMessage({ type: 'openReadableView', html: document.documentElement.outerHTML }, (response) => {
-          if (response && response.success) {
-            document.getElementById("status").innerText = "Status: Opened Readable View";
-          } else {
-            document.getElementById("status").innerText = "Status: Error: " + (response && response.error ? response.error : "Unknown error");
-          }
-        });
-      });
-    </script>
+    <script src="popup.js"></script>
   </body>
 </html>
