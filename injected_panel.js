@@ -19,7 +19,7 @@
   container.style.fontFamily = "'Segoe UI', sans-serif";
 
   // Build the inner layout.
-  // A style block is added first for the switch toggle.
+  // A style block is added first for the custom switch toggle.
   container.innerHTML = `
     <style>
       .switch {
@@ -110,13 +110,21 @@
         </label>
         <span style="color: blue; font-weight: bold; margin-left: 8px;">Enable Readability</span>
       </div>
-      <!-- Status Field -->
-      <div id="statusField" style="margin: 0 15px 10px 15px; padding: 5px 10px; border: 2px solid blue; border-radius: 5px; background-color: blue; color: white; font-weight: bold; white-space: nowrap; flex: 0 0 auto;">
-        Status: Idle
+      <!-- Download Videos Toggle -->
+      <div id="videoToggle" style="margin: 0 15px 10px 15px; flex: 0 0 auto; display: flex; align-items: center;">
+        <label class="switch" style="margin: 0;">
+          <input type="checkbox" id="enableVideos">
+          <span class="slider"></span>
+        </label>
+        <span style="color: blue; font-weight: bold; margin-left: 8px;">Download Videos</span>
       </div>
-      <!-- Log Output Field for discovered URLs -->
-      <div id="logOutput" style="margin: 0 15px 10px 15px; padding: 15px; flex: 1 1 auto; overflow-y: auto; overflow-x: auto; border: 1px solid blue; border-radius: 5px; background: white; color: black; white-space: nowrap; position: relative;">
+      <!-- Log Output Field for discovered URLs (shrunken to show last ~3 lines) -->
+      <div id="logOutput" style="margin: 0 15px 10px 15px; padding: 15px; height: 60px; overflow-y: auto; overflow-x: auto; border: 1px solid blue; border-radius: 5px; background: white; color: black; white-space: nowrap; position: relative;">
         <!-- Discovered URLs will be listed here -->
+      </div>
+      <!-- Status Field (clickable to toggle expansion, with full history stored) -->
+      <div id="statusField" style="margin: 0 15px 10px 15px; padding: 5px 10px; height: 30px; overflow: hidden; border: 2px solid blue; border-radius: 5px; background-color: blue; color: white; font-weight: bold; white-space: nowrap; cursor: pointer; flex: 0 0 auto;">
+        Status: Idle
       </div>
       <!-- Start Button -->
       <div id="startButtonContainer" style="padding: 15px; flex: 0 0 auto; text-align: center;">
@@ -139,6 +147,34 @@
     }
   });
 
+  // Event listener for Status Field to toggle expansion.
+  const statusField = document.getElementById("statusField");
+  let statusExpanded = false;
+  statusField.addEventListener("click", () => {
+    if (statusExpanded) {
+      // Collapse: set height back to 30px, hide overflow, and restore collapsed colors.
+      statusField.style.height = "30px";
+      statusField.style.overflow = "hidden";
+      statusField.style.backgroundColor = "blue";
+      statusField.style.color = "white";
+    } else {
+      // Expand: set height to 150px, allow scrolling, and change colors for expanded view.
+      statusField.style.height = "150px";
+      statusField.style.overflow = "auto";
+      statusField.style.backgroundColor = "white";
+      statusField.style.color = "blue";
+    }
+    statusExpanded = !statusExpanded;
+    // Update text display based on current history.
+    const history = statusField.dataset.history ? statusField.dataset.history.split("\n") : [];
+    if (!statusExpanded) {
+      const lastLine = history[history.length - 1];
+      statusField.innerText = "Status: " + lastLine;
+    } else {
+      statusField.innerText = "Status:\n" + history.join("\n");
+    }
+  });
+
   // Internal storage for discovered URLs.
   let discoveredLog = [];
   const MAX_LOG_LINES = 2000;
@@ -146,7 +182,18 @@
 
   // Function to update the status field.
   function updateStatusField(text) {
-    document.getElementById("statusField").innerText = "Status: " + text;
+    // Append the new status text to the full history stored in the statusField's dataset.
+    let history = statusField.dataset.history ? statusField.dataset.history.split("\n") : [];
+    history.push(text);
+    statusField.dataset.history = history.join("\n");
+    // Always display the latest line when collapsed.
+    if (!statusExpanded) {
+      const lastLine = history[history.length - 1];
+      statusField.innerText = "Status: " + lastLine;
+    } else {
+      // When expanded, show full history.
+      statusField.innerText = "Status:\n" + history.join("\n");
+    }
   }
 
   // Create a Copy button for the logOutput field with updated styles.
@@ -435,9 +482,12 @@
     }
   }
   
+  // Updated triggerZipDownload with three separate status messages.
   function triggerZipDownload(blob, domain) {
     const blobUrl = URL.createObjectURL(blob);
     const filename = `${domain}.zip`;
+    updateStatusField("Zip Created.");
+    updateStatusField("Initiating Download...");
     chrome.runtime.sendMessage({
       type: 'downloadZip',
       blobUrl: blobUrl,
@@ -449,7 +499,7 @@
       } else if (!response.success) {
         updateStatusField("Download error: " + response.error);
       } else {
-        updateStatusField(`Zip Created. Initiating Download...`);
+        updateStatusField("Download Successful.");
       }
       setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     });
@@ -461,6 +511,10 @@
       visited = new Set();
       downloadedFiles = {};
       discoveredLog = [];
+      // Do not reset the status history here so that the previous run's history is retained.
+      // If you wish to reset, uncomment the following line:
+      // statusField.dataset.history = "";
+      
       updateStatusField("Idle");
 
       let inputUrl = document.getElementById("url").value.trim();
@@ -480,7 +534,6 @@
       updateStatusField("Starting zipping...");
       try {
         const zipBlob = await zipFiles();
-        updateStatusField("Zip Created. Initiating Download...");
         triggerZipDownload(zipBlob, startDomain);
         updateStatusField("Done (" + discoveredPages.length + " pages)");
       } catch (e) {
