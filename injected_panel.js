@@ -2,25 +2,25 @@
   // If the panel is already injected, do not inject it again.
   if (document.getElementById("my-extension-panel")) return;
 
-  // (No dynamic injection of readability.js here – it's injected by background.js)
-
-  // Create the panel container with an easy-on-the-eyes font.
+  // Create the panel container with dynamic sizing.
   const container = document.createElement("div");
   container.id = "my-extension-panel";
   container.style.position = "fixed";
   container.style.top = "10px";
   container.style.right = "10px";
   container.style.width = "420px";
-  container.style.height = "600px";
+  container.style.minHeight = "600px";
+  container.style.maxHeight = "90vh"; // never exceed 90% of viewport height
+  container.style.height = "auto";
   container.style.backgroundColor = "white";
   container.style.border = "2px solid #FF69B4"; // pink border
   container.style.borderRadius = "15px";
   container.style.zIndex = "999999";
   container.style.boxShadow = "0 0 10px rgba(0,0,0,0.5)";
-  container.style.overflow = "hidden";
+  container.style.overflowY = "auto"; // allow vertical scrolling if needed
   container.style.fontFamily = "'Segoe UI', sans-serif";
 
-  // Build the inner layout.
+  // Build the inner layout using a flex column.
   container.innerHTML = `
     <style>
       .switch {
@@ -62,10 +62,49 @@
       .switch input:checked + .slider:before {
         transform: translateX(16px);
       }
+      /* Flex layout for panel */
+      #panel-content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      /* Fixed areas */
+      #header, #inputs, #toggles, #startButtonContainer {
+        flex: 0 0 auto;
+      }
+      /* Main content expands */
+      #main-content {
+        flex: 1 1 auto;
+        padding: 0 15px;
+        overflow-y: auto;
+      }
+      /* Log output field styling:
+         Defaults to 10 lines (160px) tall, expandable to 20 lines (320px) */
+      #logOutput {
+        margin-bottom: 10px;
+        padding: 15px;
+        border: 1px solid blue;
+        border-radius: 5px;
+        background: white;
+        color: black;
+        position: relative;
+        overflow-x: auto;
+        overflow-y: auto;
+        height: 160px;
+      }
+      #logMessages {
+        white-space: pre-wrap;
+      }
+      /* Status field transitions:
+         Default is 1 line (30px); expanded to 20 lines (600px) */
+      #statusField {
+        transition: height 0.3s ease;
+        height: 30px;
+      }
     </style>
-    <div id="panel-content" style="display: flex; flex-direction: column; height: 100%;">
+    <div id="panel-content">
       <!-- Header: Logo with external image, full width -->
-      <div id="header" style="position: relative; padding: 0; margin: 0; flex: 0 0 auto;">
+      <div id="header" style="position: relative; padding: 0; margin: 0;">
           <img id="logoImg" src="${chrome.runtime.getURL("images/logo.webp")}" alt="PrestoCrawl Logo" style="display: block; width: 100%; height: auto; border-top-left-radius: 15px; border-top-right-radius: 15px;" />
           <!-- Close Button overlaid on top-right of logo -->
           <div id="closeButton" style="
@@ -85,13 +124,13 @@
             ×
           </div>
       </div>
-      <!-- Input fields: URL and Link depth on the same row -->
-      <div id="inputs" style="padding: 15px; flex: 0 0 auto; display: flex; gap: 10px; align-items: flex-start;">
+      <!-- Input fields: URL and Link depth -->
+      <div id="inputs" style="padding: 15px; display: flex; gap: 10px; align-items: flex-start;">
         <div style="flex: 1;">
           <label for="url" style="color: blue; display: block; margin-bottom: 5px;">URL</label>
           <input type="text" id="url" style="width: 100%; padding: 8px; border: 1px solid blue; border-radius: 5px; background: white; color: black;" />
         </div>
-        <div style="flex: 0 0 auto; display: flex; flex-direction: column; justify-content: flex-start;">
+        <div style="display: flex; flex-direction: column; justify-content: flex-start;">
           <label for="depth" style="color: blue; margin-bottom: 5px;">Link depth</label>
           <select id="depth" style="width: auto; padding: 8px; border: 1px solid blue; border-radius: 5px; background: white; color: black;">
             <option value="0">0</option>
@@ -103,31 +142,38 @@
           </select>
         </div>
       </div>
-      <!-- Readability Toggle -->
-      <div id="readabilityToggle" style="margin: 0 15px 10px 15px; flex: 0 0 auto; display: flex; align-items: center;">
-        <label class="switch" style="margin: 0;">
-          <input type="checkbox" id="enableReadability">
-          <span class="slider"></span>
-        </label>
-        <span style="color: blue; font-weight: bold; margin-left: 8px;">Enable Readability</span>
+      <!-- Toggles -->
+      <div id="toggles" style="padding: 0 15px 10px 15px;">
+        <!-- Readability Toggle -->
+        <div id="readabilityToggle" style="display: flex; align-items: center; margin-bottom: 10px;">
+          <label class="switch" style="margin: 0;">
+            <input type="checkbox" id="enableReadability">
+            <span class="slider"></span>
+          </label>
+          <span style="color: blue; font-weight: bold; margin-left: 8px;">Enable Readability</span>
+        </div>
+        <!-- Download Videos Toggle -->
+        <div id="videoToggle" style="display: flex; align-items: center;">
+          <label class="switch" style="margin: 0;">
+            <input type="checkbox" id="enableVideos">
+            <span class="slider"></span>
+          </label>
+          <span style="color: blue; font-weight: bold; margin-left: 8px;">Download Videos</span>
+        </div>
       </div>
-      <!-- Download Videos Toggle -->
-      <div id="videoToggle" style="margin: 0 15px 10px 15px; flex: 0 0 auto; display: flex; align-items: center;">
-        <label class="switch" style="margin: 0;">
-          <input type="checkbox" id="enableVideos">
-          <span class="slider"></span>
-        </label>
-        <span style="color: blue; font-weight: bold; margin-left: 8px;">Download Videos</span>
+      <!-- Main content: Log output and Status field -->
+      <div id="main-content">
+        <!-- Log Output Field with inner container for messages -->
+        <div id="logOutput">
+          <div id="logMessages"></div>
+        </div>
+        <!-- Status Field -->
+        <div id="statusField" style="padding: 5px 10px; overflow: hidden; border: 2px solid blue; border-radius: 5px; background-color: blue; color: white; font-weight: bold; white-space: nowrap; cursor: pointer;">
+          Status: Idle
+        </div>
       </div>
-      <!-- Log Output Field -->
-      <div id="logOutput" style="margin: 0 15px 10px 15px; padding: 15px; height: 60px; overflow-y: auto; overflow-x: auto; border: 1px solid blue; border-radius: 5px; background: white; color: black; white-space: nowrap; position: relative;">
-      </div>
-      <!-- Status Field (clickable to toggle expansion, with full history stored) -->
-      <div id="statusField" style="margin: 0 15px 10px 15px; padding: 5px 10px; height: 30px; overflow: hidden; border: 2px solid blue; border-radius: 5px; background-color: blue; color: white; font-weight: bold; white-space: nowrap; cursor: pointer; flex: 0 0 auto;">
-        Status: Idle
-      </div>
-      <!-- Start Button -->
-      <div id="startButtonContainer" style="padding: 15px; flex: 0 0 auto; text-align: center;">
+      <!-- Footer: Start Button -->
+      <div id="startButtonContainer" style="padding: 15px; text-align: center;">
         <button id="downloadBtn" style="width: 33%; padding: 10px; background-color: #FF69B4; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1em;">Start</button>
       </div>
     </div>
@@ -147,17 +193,17 @@
     }
   });
 
-  // Status field toggle.
+  // Status field toggle (expanding/shrinking status field).
   const statusField = document.getElementById("statusField");
   let statusExpanded = false;
   statusField.addEventListener("click", () => {
     if (statusExpanded) {
-      statusField.style.height = "30px";
+      statusField.style.height = "30px"; // 1 line
       statusField.style.overflow = "hidden";
       statusField.style.backgroundColor = "blue";
       statusField.style.color = "white";
     } else {
-      statusField.style.height = "150px";
+      statusField.style.height = "600px"; // 20 lines
       statusField.style.overflow = "auto";
       statusField.style.backgroundColor = "white";
       statusField.style.color = "blue";
@@ -172,7 +218,19 @@
     }
   });
 
-  // Logging and copy button setup.
+  // Log output field toggle (expanding/shrinking log messages).
+  const logOutput = document.getElementById("logOutput");
+  let logExpanded = false;
+  logOutput.addEventListener("click", () => {
+    if (logExpanded) {
+      logOutput.style.height = "160px"; // 10 lines
+    } else {
+      logOutput.style.height = "320px"; // 20 lines
+    }
+    logExpanded = !logExpanded;
+  });
+
+  // Set up logging and copy button.
   let discoveredLog = [];
   const MAX_LOG_LINES = 2000;
   const DISPLAY_LOG_LINES = 10;
@@ -188,7 +246,7 @@
     }
   }
 
-  const logOutputContainer = document.getElementById("logOutput");
+  // Create copy button for the log output.
   const copyButton = document.createElement("button");
   copyButton.innerHTML = "📋 Copy";
   copyButton.style.position = "absolute";
@@ -201,24 +259,23 @@
   copyButton.style.background = "transparent";
   copyButton.style.color = "#333";
   copyButton.style.cursor = "pointer";
-  copyButton.addEventListener("click", () => {
+  copyButton.addEventListener("click", (e) => {
+    e.stopPropagation();
     navigator.clipboard.writeText(discoveredLog.join("\n"))
       .then(() => updateStatusField("Copied URLs to clipboard"))
       .catch(err => updateStatusField("Copy error: " + err.message));
   });
-  logOutputContainer.appendChild(copyButton);
+  logOutput.appendChild(copyButton);
 
+  // Append log messages into the #logMessages container.
   function appendLog(message) {
     discoveredLog.push(message);
     if (discoveredLog.length > MAX_LOG_LINES) {
       discoveredLog = discoveredLog.slice(-MAX_LOG_LINES);
     }
     const displayMessages = discoveredLog.slice(-DISPLAY_LOG_LINES);
-    const logOutput = document.getElementById("logOutput");
-    logOutput.innerText = displayMessages.join("\n");
-    logOutput.appendChild(copyButton);
-    logOutput.scrollLeft = logOutput.scrollWidth;
-    logOutput.scrollTop = logOutput.scrollHeight;
+    const logMessages = document.getElementById("logMessages");
+    logMessages.innerText = displayMessages.join("\n");
   }
 
   function normalizeUrl(url) {
@@ -370,9 +427,7 @@
           const response = await fetch(url);
           html = await response.text();
         }
-        // Debug: log the current Readability value.
         console.log("window.Readability:", window.Readability);
-        // If the Enable Readability toggle is checked, process the HTML.
         if (document.getElementById("enableReadability").checked) {
           try {
             if (typeof Readability === "undefined") {
@@ -452,10 +507,19 @@
   
   document.getElementById("downloadBtn").addEventListener("click", async () => {
     try {
+      // Reset fields for a new run.
       discoveredPages = [];
       visited = new Set();
       downloadedFiles = {};
       discoveredLog = [];
+      // Clear status field history and log messages.
+      statusField.dataset.history = "";
+      document.getElementById("logMessages").innerText = "";
+      // Also reset toggles to default sizes.
+      statusField.style.height = "30px";
+      logOutput.style.height = "160px";
+      statusExpanded = false;
+      logExpanded = false;
       updateStatusField("Idle");
 
       let inputUrl = document.getElementById("url").value.trim();
