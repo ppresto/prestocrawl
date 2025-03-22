@@ -42,3 +42,7 @@ Declare your new utility files as needed if they need to be loaded as modules.
 Popup or Panel UI:
 File: popup.html or the panel code in injected_panel.js
 Include a button that lets you trigger the download process for the video.
+
+
+
+Ensure that your background.js still injects the libraries and your new content modules in the correct order (for example, using your bundler or a manual concatenation if you’re not using a module system).

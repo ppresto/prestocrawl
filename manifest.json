@@ -10,14 +10,26 @@
   ],
   "host_permissions": ["<all_urls>"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/background.js",
+    "type": "module"
   },
   "action": {
-    "default_title": "PrestoCrawl"
+    "default_title": "PrestoCrawl",
+    "default_popup": "popup.html"
   },
   "web_accessible_resources": [
     {
-      "resources": ["images/logo.webp", "readable.html", "reader.css", "readability.js", "m3u8-parser.min.js"],
+      "resources": [
+        "images/logo.webp",
+        "src/libs/readability.js",
+        "src/libs/m3u8-parser.min.js",
+        "src/libs/jszip.min.js",
+        "src/content/content_fetcher.js",
+        "src/content/video_extractor.js",
+        "src/content/injected_panel.js",
+        "readable.html",
+        "reader.css"
+      ],
       "matches": ["<all_urls>"]
     }
   ]
